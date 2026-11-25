@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>이주호 공격하기</title>
+<title>Mr.Lee 공격하기</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -17,16 +17,25 @@
 html,body{height:100%}
 body{margin:0;background:#0b0c0e;color:#f1f1f1;font:14px/1.4 "Noto Sans KR",system-ui,sans-serif;display:grid;place-items:center;height:100dvh;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:manipulation}
 .stage{position:relative;width:min(100vw,177.78dvh);aspect-ratio:16/9}
+.stage.mob{width:100vw;height:100dvh;aspect-ratio:auto}
 canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:crosshair;touch-action:none}
-.ctl{position:absolute;left:50%;transform:translateX(-50%);bottom:2%;display:flex;gap:5px;flex-wrap:nowrap;max-width:98%}
-.ctl.moves{bottom:calc(2% + 38px)}
+.bar{position:absolute;left:0;right:0;bottom:0;padding:0 6px calc(10px + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none}
+.ctl{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;max-width:100%;pointer-events:auto}
 .ctl button{font:inherit;font-weight:500;font-size:13px;height:32px;padding:0 11px;border:1px solid rgba(255,255,255,.14);border-radius:999px;color:#e8e8ea;background:rgba(12,13,16,.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:5px}
 .ctl button small{font-size:11px;opacity:.6}
 .ctl button.on{background:rgba(245,245,247,.92);color:#111;border-color:transparent}
 .ctl button:active{transform:scale(.96)}
 .ctl button:focus-visible{outline:2px solid #fff;outline-offset:2px}
 .ctl button.lock{display:none}
-@media(max-width:640px){.ctl button{font-size:11px;height:26px;padding:0 7px}.ctl.moves{bottom:calc(2% + 30px)}}
+.mob .ctl button{font-size:13px;height:38px;padding:0 11px}
+.mob .k{display:none}
+.mob .ctl{gap:6px}
+.start{position:absolute;inset:0;z-index:4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;background:rgba(8,9,11,.62);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);text-align:center;padding:24px}
+.start[hidden]{display:none}
+.start h1{margin:0;font:clamp(40px,9vw,84px)/1.05 "Black Han Sans",sans-serif;letter-spacing:.01em;text-wrap:balance}
+.start button{font:700 20px "Noto Sans KR",sans-serif;min-width:180px;height:58px;border:0;border-radius:999px;background:#f2f2f4;color:#111;cursor:pointer;box-shadow:0 8px 30px rgba(0,0,0,.45)}
+.start button:active{transform:scale(.97)}
+.start button:focus-visible{outline:3px solid #f2c04b;outline-offset:3px}
 .shop{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:5;padding:12px}
 .shop[hidden]{display:none}
 .box{background:#1b1c1f;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:18px;width:min(460px,100%);max-height:100%;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.6)}
@@ -41,25 +50,28 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:cro
 </head>
 <body>
 <div class="stage">
-<canvas id="c" width="960" height="540" aria-label="이주호 공격하기 화면"></canvas>
+<canvas id="c" width="960" height="540" aria-label="Mr.Lee 공격하기"></canvas>
+<div class="bar">
 <div class="ctl moves" id="moves">
-  <button data-m="jab">잽(J)</button>
-  <button data-m="straight">스트레이트(K)</button>
-  <button data-m="hook">훅(H)</button>
-  <button data-m="upper">어퍼컷(U)</button>
-  <button data-m="body">바디블로(B)</button>
+  <button data-m="jab">잽<span class="k">(J)</span></button>
+  <button data-m="straight">스트레이트<span class="k">(K)</span></button>
+  <button data-m="hook">훅<span class="k">(H)</span></button>
+  <button data-m="upper">어퍼컷<span class="k">(U)</span></button>
+  <button data-m="body">바디블로<span class="k">(B)</span></button>
 </div>
 <div class="ctl" id="wpn">
-  <button data-w="fist" class="on">주먹(1)</button>
-  <button data-w="gun">권총(2)<small id="s-gun"></small></button>
-  <button data-w="shotgun">샷건(3)<small id="s-shotgun"></small></button>
-  <button data-w="smg">기관총(4)<small id="s-smg"></small></button>
-  <button data-w="laser">레이저(5)<small id="s-laser"></small></button>
-  <button data-w="tesla">테슬라(6)<small id="s-tesla"></small></button>
-  <button data-w="missile">미사일(7)<small id="s-missile"></small></button>
-  <button data-w="nuke">핵(8)<small id="s-nuke"></small></button>
+  <button data-w="fist" class="on">주먹<span class="k">(1)</span></button>
+  <button data-w="gun">권총<span class="k">(2)</span><small id="s-gun"></small></button>
+  <button data-w="shotgun">샷건<span class="k">(3)</span><small id="s-shotgun"></small></button>
+  <button data-w="smg">기관총<span class="k">(4)</span><small id="s-smg"></small></button>
+  <button data-w="laser">레이저<span class="k">(5)</span><small id="s-laser"></small></button>
+  <button data-w="tesla">테슬라<span class="k">(6)</span><small id="s-tesla"></small></button>
+  <button data-w="missile">미사일<span class="k">(7)</span><small id="s-missile"></small></button>
+  <button data-w="nuke">핵<span class="k">(8)</span><small id="s-nuke"></small></button>
   <button id="snd">소리 켬</button>
 </div>
+</div>
+<div class="start" id="start"><h1 id="startTitle"></h1><button id="play">플레이</button></div>
 </div>
 <div class="shop" id="shop" hidden><div class="box" role="dialog" aria-label="상점">
   <h2>상점</h2><p class="coin" id="shopcoins"></p><div id="items"></div>
@@ -86,7 +98,7 @@ const SHOP={ // 구매가 / 강화 기본가(레벨마다 배수)
   laser:{name:'레이저',buy:150,up:70,max:5,desc:'누르는 동안 계속 지짐'},
   tesla:{name:'테슬라건',buy:200,up:90,max:5,desc:'번개가 몸 여러 곳으로 튐'},
   missile:{name:'미사일',buy:300,up:120,max:5,desc:'맞으면 레고처럼 분해'},
-  nuke:{name:'핵미사일',buy:1500,up:0,max:1,desc:'하늘에서 떨어져 화면 전체가 날아감'}
+  nuke:{name:'핵미사일',buy:50000,up:0,max:1,desc:'하늘에서 떨어져 화면 전체가 날아감'}
 };
 const GUNS={ // pow: 한 발 데미지, cd: 발사 간격, heat: 한 발당 열, cool: 초당 식는 양, imp: 밀어내는 힘
   gun:{cd:.3,pow:[45,55],heat:.1,cool:.12,imp:1,ang:.03,push:.04,len:112},
@@ -108,8 +120,23 @@ const MOVES={ // out/back: 실제 선수 기준 뻗는·돌아오는 시간(초)
 };
 
 const cv=document.getElementById('c'),mainCtx=cv.getContext('2d');let ctx=mainCtx;
-const W=960,H=540,PY=510,HOME=480;
+let W=960,H=540,PY=510,HOME=480,MOB=false,UIH=0;
 const REST={L:{x:290,y:530},R:{x:670,y:530}},BASE={x:830,y:565};
+function layout(){ // 데스크톱 16:9, 모바일은 화면 비율 그대로 채움
+  const vw=innerWidth,vh=innerHeight;
+  MOB=matchMedia('(pointer:coarse)').matches||vw<700;
+  if(!MOB){W=960;H=540}
+  else if(vh>=vw){W=460;H=Math.round(Math.min(1100,Math.max(640,460*vh/vw)))}
+  else{H=540;W=Math.round(Math.min(1250,Math.max(860,540*vw/vh)))}
+  document.querySelector('.stage').classList.toggle('mob',MOB);
+  cv.width=W;cv.height=H;
+  UIH=MOB&&H>W?190:0;            // 세로 모바일: 아래 버튼 영역만큼 바닥을 올림
+  PY=H-30-UIH;HOME=W/2;BX=HOME;
+  REST.L.x=W*.3;REST.R.x=W*.7;REST.L.y=REST.R.y=H-10-UIH*.6;
+  BASE.x=W-130;BASE.y=H+25-UIH*.75;
+  if(typeof bgC!=='undefined'){bgC.width=W+60;bgC.height=H+60;vgC.width=W;vgC.height=H;prerender()}
+  rag=null;a=0;va=0;
+}
 let BX=HOME,a=0,va=0,sq=0,vsq=0,lift=0,vl=0,rest=0,upAt=-9,stag=0,rag=null;
 let parts=[],rings=[],fx=[],missiles=[],tracers=[],marks=[],splats=[],pieces=[],beam=null,bubble=null,shake=0;
 let hurtT=0,dizzyT=0,zapT=0,lastHit=-99,now=0,combo=0,queued=null,markA=1,lastPopT=0,lastScorchT=0;
@@ -171,7 +198,7 @@ function land(x,v,r){ // 바닥에 쿵
 }
 function standUp(){
   const P=rag.p,fx0=(P.footL.x+P.footR.x)/2,fy0=(P.footL.y+P.footR.y)/2;
-  BX=Math.max(170,Math.min(790,fx0));
+  BX=Math.max(W*.18,Math.min(W*.82,fx0));
   a=Math.max(-1.5,Math.min(1.5,Math.atan2(P.neck.x-fx0,-(P.neck.y-fy0))));
   va=0;rest=0;upAt=now;rag=null;stag=0;healNow=true; // 일어나면 자국 전부 지움
 }
@@ -466,24 +493,24 @@ function update(dt){
 /* ---- drawing ---- */
 function ell(x,y,rx,ry){ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);ctx.fill()}
 function sceneStatic(){
-  const g=ctx.createLinearGradient(0,0,0,440);g.addColorStop(0,'#1d1f23');g.addColorStop(1,'#2c2f34');
-  ctx.fillStyle=g;ctx.fillRect(-30,-30,W+60,500);
-  ctx.fillStyle='rgba(255,255,255,.025)';for(let x=0;x<W;x+=160)ctx.fillRect(x,0,2,440);
+  const F=PY-70,sx=W/960;const g=ctx.createLinearGradient(0,0,0,F);g.addColorStop(0,'#1d1f23');g.addColorStop(1,'#2c2f34');
+  ctx.fillStyle=g;ctx.fillRect(-30,-30,W+60,F+60);
+  ctx.fillStyle='rgba(255,255,255,.025)';for(let x=0;x<W;x+=160)ctx.fillRect(x,0,2,F);
   ctx.save();ctx.globalCompositeOperation='lighter';
-  const wl=ctx.createLinearGradient(620,0,380,440);wl.addColorStop(0,'rgba(255,236,200,.10)');wl.addColorStop(1,'rgba(255,236,200,0)');
-  ctx.fillStyle=wl;ctx.beginPath();ctx.moveTo(600,-10);ctx.lineTo(760,-10);ctx.lineTo(560,470);ctx.lineTo(300,470);ctx.fill();ctx.restore();
-  for(const [x,h] of [[130,250],[840,230]]){
+  const wl=ctx.createLinearGradient(620*sx,0,380*sx,F);wl.addColorStop(0,'rgba(255,236,200,.10)');wl.addColorStop(1,'rgba(255,236,200,0)');
+  ctx.fillStyle=wl;ctx.beginPath();ctx.moveTo(600*sx,-10);ctx.lineTo(760*sx,-10);ctx.lineTo(560*sx,F+30);ctx.lineTo(300*sx,F+30);ctx.fill();ctx.restore();
+  for(const [x,h] of [[W*.135,Math.min(250,F-110)],[W*.875,Math.min(230,F-130)]]){
     ctx.strokeStyle='#121316';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x,-10);ctx.lineTo(x,60);ctx.stroke();
     const bg=ctx.createLinearGradient(x-34,0,x+34,0);bg.addColorStop(0,'#141518');bg.addColorStop(.45,'#3a2a24');bg.addColorStop(1,'#141518');
     ctx.fillStyle=bg;ctx.beginPath();ctx.roundRect(x-34,60,68,h,22);ctx.fill();
     ctx.fillStyle='rgba(0,0,0,.35)';ctx.fillRect(x-34,90,68,6);ctx.fillRect(x-34,60+h-40,68,6);
   }
-  ctx.fillStyle='#111214';ctx.fillRect(-30,432,W+60,10);
-  const f=ctx.createLinearGradient(0,440,0,H);f.addColorStop(0,'#20252d');f.addColorStop(1,'#13161b');
-  ctx.fillStyle=f;ctx.fillRect(-30,440,W+60,H);
+  ctx.fillStyle='#111214';ctx.fillRect(-30,F-8,W+60,10);
+  const f=ctx.createLinearGradient(0,F,0,H);f.addColorStop(0,'#20252d');f.addColorStop(1,'#13161b');
+  ctx.fillStyle=f;ctx.fillRect(-30,F,W+60,H);
   ctx.strokeStyle='rgba(255,255,255,.035)';ctx.lineWidth=1;
-  for(let x=-400;x<W+400;x+=110){ctx.beginPath();ctx.moveTo(x,442);ctx.lineTo(HOME+(x-HOME)*2.2,H+20);ctx.stroke()}
-  for(const y of[470,505]){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+  for(let x=-400;x<W+400;x+=110){ctx.beginPath();ctx.moveTo(x,F+2);ctx.lineTo(HOME+(x-HOME)*2.2,H+20);ctx.stroke()}
+  for(const y of[F+30,F+65]){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
   const l=ctx.createRadialGradient(HOME,200,10,HOME,300,460);l.addColorStop(0,'rgba(255,244,225,.16)');l.addColorStop(1,'rgba(0,0,0,0)');
   ctx.fillStyle=l;ctx.fillRect(0,0,W,H);
   const p=ctx.createRadialGradient(HOME,PY,10,HOME,PY,260);p.addColorStop(0,'rgba(255,244,225,.10)');p.addColorStop(1,'rgba(0,0,0,0)');
@@ -491,9 +518,8 @@ function sceneStatic(){
 }
 function vignetteStatic(){const v=ctx.createRadialGradient(W/2,H/2,H*.35,W/2,H/2,W*.62);v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,.55)');ctx.fillStyle=v;ctx.fillRect(0,0,W,H)}
 const bgC=document.createElement('canvas'),vgC=document.createElement('canvas');
-bgC.width=W+60;bgC.height=H+60;vgC.width=W;vgC.height=H;
 function prerender(){ctx=bgC.getContext('2d');ctx.translate(30,30);sceneStatic();ctx=vgC.getContext('2d');vignetteStatic();ctx=mainCtx}
-prerender();
+layout();
 function scene(){ctx.drawImage(bgC,-30,-30)}
 function vignette(){ctx.drawImage(vgC,0,0)}
 let G_TORSO,G_HEAD;const G_GLOVE={};
@@ -742,7 +768,7 @@ function hud(){
   }
   if(combo>=2){
     ctx.textAlign='left';ctx.textBaseline='top';ctx.font='36px "Black Han Sans",sans-serif';ctx.lineWidth=5;ctx.strokeStyle='#000';
-    const t=combo+' COMBO';ctx.strokeText(t,24,H-110);ctx.fillStyle=combo>=12?'#ff5c5c':'#ffd23f';ctx.fillText(t,24,H-110);
+    const t=combo+' COMBO';ctx.strokeText(t,24,H-110-UIH);ctx.fillStyle=combo>=12?'#ff5c5c':'#ffd23f';ctx.fillText(t,24,H-110-UIH);
   }
 }
 function effects(){
@@ -763,6 +789,12 @@ function draw(){
   if(weapon==='fist'){glove(gl.L);glove(gl.R)}else weaponSprite();
   ctx.restore();vignette();if(whiteA>0){ctx.fillStyle='rgba(255,250,235,'+Math.min(1,whiteA*1.3)+')';ctx.fillRect(0,0,W,H)}crosshair();hud();
 }
+let started=false;
+const startEl=document.getElementById('start');
+document.getElementById('startTitle').textContent=DUMMY_NAME+' 공격하기';
+function startGame(){started=true;startEl.hidden=true;audio()}
+document.getElementById('play').addEventListener('click',startGame);
+let rzT=0;addEventListener('resize',()=>{clearTimeout(rzT);rzT=setTimeout(layout,150)});
 let last=performance.now();
 function loop(t){const dt=Math.min(.05,(t-last)/1000);last=t;update(dt);draw();requestAnimationFrame(loop)}
 requestAnimationFrame(loop);
@@ -772,6 +804,7 @@ const KEYS={KeyJ:'jab',KeyK:'straight',KeyH:'hook',KeyU:'upper',KeyB:'body'},WKE
 const shopEl=document.getElementById('shop');
 addEventListener('keydown',e=>{
   if(e.repeat)return;
+  if(!started){if(e.code==='Enter'||e.code==='Space'){startGame();e.preventDefault()}return}
   if(!shopEl.hidden&&e.code!=='KeyS'&&e.code!=='Escape')return;
   if(KEYS[e.code]){punch(KEYS[e.code]);e.preventDefault()}
   else if(WKEYS[e.code]){setWeapon(WKEYS[e.code]);e.preventDefault()}
