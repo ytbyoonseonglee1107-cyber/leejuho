@@ -29,6 +29,9 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:cro
 .ctl button.lock{display:none}
 .mob .ctl button{font-size:13px;height:38px;padding:0 11px}
 .mob .k{display:none}
+.mob .bar{padding-bottom:calc(72px + env(safe-area-inset-bottom))} /* Netlify 배지 위로 */
+.stage:not(.mob) .bar{align-items:flex-start;padding-left:14px} /* 데스크톱: 오른쪽 아래 배지 피해 왼쪽 정렬 */
+.stage:not(.mob) .ctl{justify-content:flex-start}
 .mob .ctl{gap:6px}
 .start{position:absolute;inset:0;z-index:4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;background:rgba(8,9,11,.62);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);text-align:center;padding:24px}
 .start[hidden]{display:none}
@@ -50,7 +53,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:cro
 </head>
 <body>
 <div class="stage">
-<canvas id="c" width="960" height="540" aria-label="Mr.Lee 공격하기"></canvas>
+<canvas id="c" width="960" height="540" aria-label="Mr.Lee 공격하기 화면"></canvas>
 <div class="bar">
 <div class="ctl moves" id="moves">
   <button data-m="jab">잽<span class="k">(J)</span></button>
@@ -130,10 +133,10 @@ function layout(){ // 데스크톱 16:9, 모바일은 화면 비율 그대로 �
   else{H=540;W=Math.round(Math.min(1250,Math.max(860,540*vw/vh)))}
   document.querySelector('.stage').classList.toggle('mob',MOB);
   cv.width=W;cv.height=H;
-  UIH=MOB&&H>W?190:0;            // 세로 모바일: 아래 버튼 영역만큼 바닥을 올림
+  UIH=MOB&&H>W?260:0;            // 세로 모바일: 아래 버튼(+Netlify 배지) 영역만큼 바닥을 올림
   PY=H-30-UIH;HOME=W/2;BX=HOME;
-  REST.L.x=W*.3;REST.R.x=W*.7;REST.L.y=REST.R.y=H-10-UIH*.6;
-  BASE.x=W-130;BASE.y=H+25-UIH*.75;
+  REST.L.x=W*.3;REST.R.x=W*.7;REST.L.y=REST.R.y=H-10-(UIH?235:0);
+  BASE.x=W-130;BASE.y=H+25-(UIH?230:0);
   if(typeof bgC!=='undefined'){bgC.width=W+60;bgC.height=H+60;vgC.width=W;vgC.height=H;prerender()}
   rag=null;a=0;va=0;
 }
