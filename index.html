@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>Mr.Lee 공격하기</title>
+<title>펀치맨 샌드백 트레이닝</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -48,6 +48,10 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:cro
 .item div{flex:1}.item b{font-size:16px}.item small{display:block;opacity:.65;font-size:12px}
 .box button{font:inherit;font-weight:700;border:0;border-radius:10px;min-height:40px;padding:4px 12px;cursor:pointer;background:#f2c04b;color:#1a1200;white-space:nowrap}
 .box button:disabled{background:#3a3b3f;color:#8a8a8f;cursor:default}
+.codebtn{position:absolute;top:calc(8px + env(safe-area-inset-top));right:10px;z-index:3;font:500 12px "Noto Sans KR",sans-serif;height:28px;padding:0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.2);background:rgba(12,13,16,.55);color:#fff;cursor:pointer}
+.codeform{display:flex;gap:8px;margin:6px 0 4px}
+.codeform input{flex:1;font:16px "Noto Sans KR",sans-serif;height:44px;padding:0 12px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:#25262a;color:#fff}
+.codeform input:focus{outline:2px solid #f2c04b;outline-offset:1px}
 .box .close{width:100%;background:#323338;color:#fff;margin-top:4px}
 </style>
 </head>
@@ -74,8 +78,15 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:cro
   <button id="snd">소리 켬</button>
 </div>
 </div>
+<button class="codebtn" id="codeBtn">코드</button>
 <div class="start" id="start"><h1 id="startTitle"></h1><button id="play">플레이</button></div>
 </div>
+<div class="shop" id="code" hidden><div class="box" role="dialog" aria-label="코드 입력">
+  <h2>코드 입력</h2>
+  <form id="codeForm" class="codeform"><input id="codeIn" inputmode="numeric" autocomplete="off" maxlength="16" placeholder="코드를 입력하세요" aria-label="코드"><button>확인</button></form>
+  <p class="coin" id="codeMsg"></p>
+  <button class="close" id="codeClose">닫기</button>
+</div></div>
 <div class="shop" id="shop" hidden><div class="box" role="dialog" aria-label="상점">
   <h2>상점</h2><p class="coin" id="shopcoins"></p><div id="items"></div>
   <button class="close" id="shopclose">닫기</button>
@@ -86,34 +97,32 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:cro
 const DUMMY_NAME='Juho LEE';  // 캐릭터 이름
 const COIN_RATE=.02;       // 주먹 코인 = 데미지 × 이 값
 const GUN_COIN=3;          // 총·레이저·테슬라는 주먹의 몇 배 코인
-const KETCHUP_HITS=20;     // 총알이 이만큼 박힌 뒤에 넘어질 때만 케첩
+const KETCHUP_HITS=20;
 const HEAL_DELAY=5;        // 안 때리면 몇 초 뒤 원래 모습으로
-const RESPAWN=2.5;         // 미사일로 죽은 뒤 부활(초, 조각 흩어지는 1.2초 별도)
+const RESPAWN=2.5;         // 미사일로 죽은 뒤 부활(초)
 const OVERHEAT=3;          // 과열되면 몇 초간 사용 금지
-const STAGGER=300;         // 이만큼 누적 데미지면 넘어짐 (다리는 1.7배로 쌓임)
-const UP_DMG=.2;           // 강화 1레벨당 데미지 +20%
-const MISSILE_CD=90,MISSILE_CD_STEP=12; // 미사일 쿨타임, 강화 1레벨당 감소
+const STAGGER=300;         // 이만큼 누적 데미지면 넘어짐
 const SKIN='#f0c49a',SHIRT='#2e8b7a',PANTS='#2b3a5c',HAIR='#2a1d14';
+const UP_DMG=.2;           // 강화 1레벨당 데미지 +20%
 const SHOP={ // 구매가 / 강화 기본가(레벨마다 배수)
   gun:{name:'권총',buy:30,up:20,max:5,desc:'머리 맞으면 바로 넘어짐'},
   shotgun:{name:'샷건',buy:60,up:35,max:5,desc:'산탄 8발 · 한 방에 넘어뜨림'},
   smg:{name:'기관총',buy:100,up:50,max:5,desc:'누르고 있으면 연사'},
   laser:{name:'레이저',buy:150,up:70,max:5,desc:'누르는 동안 계속 지짐'},
-  tesla:{name:'테슬라건',buy:200,up:90,max:5,desc:'번개가 몸 여러 곳으로 튐'},
-  missile:{name:'미사일',buy:300,up:120,max:5,desc:'맞으면 레고처럼 분해'},
-  nuke:{name:'핵미사일',buy:50000,up:0,max:1,desc:'하늘에서 떨어져 화면 전체가 날아감'}
+  tesla:{name:'테슬라건',buy:200,up:90,max:5,desc:'맞으면 정신 번쩍, 똑바로 섬'},
+  missile:{name:'미사일',buy:300,up:0,max:1,desc:'맞으면 레고처럼 분해'},
+  nuke:{name:'핵미사일',buy:1500,up:0,max:1,desc:'하늘에서 떨어져 화면 전체가 날아감'}
 };
 const GUNS={ // pow: 한 발 데미지, cd: 발사 간격, heat: 한 발당 열, cool: 초당 식는 양, imp: 밀어내는 힘
-  gun:{cd:.3,pow:[45,55],heat:.1,cool:.12,imp:1,ang:.03,push:.04,len:112},
-  shotgun:{cd:.9,pow:[22,28],pellets:8,heat:.25,cool:.12,imp:.35,ang:.02,push:.03,len:170},
+  gun:{cd:.3,pow:[48,58],heat:.02,cool:.3,imp:1,ang:.03,push:.04,len:112},
+  shotgun:{cd:.85,pow:[22,28],pellets:8,heat:.06,cool:.25,imp:.35,ang:.02,push:.03,len:170},
   smg:{cd:.08,pow:[20,26],auto:1,heat:.03,cool:.12,imp:.45,ang:.012,push:.015,len:150},
-  laser:{cd:.05,pow:[18,22],auto:1,heat:.02,cool:.12,imp:.18,ang:.004,push:.004,len:150},
-  tesla:{cd:.5,pow:[70,90],heat:.2,cool:.12,imp:.5,ang:.02,push:.02,len:130},
+  laser:{cd:.05,pow:[20,25],auto:1,heat:.024,cool:.12,imp:.18,ang:.004,push:.004,len:150},
+  tesla:{cd:.5,pow:[70,90],heat:.05,cool:.25,imp:.5,ang:.02,push:.02,len:130},
   missile:{cd:0,len:175},
   nuke:{cd:0,len:190}
 };
 const ORDER=['gun','shotgun','smg','laser','tesla','missile','nuke'];
-const NUKE_CD=120; // 핵 쿨타임(초)
 const MOVES={ // out/back: 실제 선수 기준 뻗는·돌아오는 시간(초)
   jab:{out:.11,back:.10,hand:'L',tx:-12,ty:-300,pow:[16,26],ang:.035,push:.05},
   straight:{out:.15,back:.14,hand:'R',tx:8,ty:-298,pow:[30,44],ang:-.045,push:.11},
@@ -132,12 +141,12 @@ function layout(){ // 데스크톱 16:9, 모바일은 화면 비율 그대로 �
   else if(vh>=vw){W=460;H=Math.round(Math.min(1100,Math.max(640,460*vh/vw)))}
   else{H=540;W=Math.round(Math.min(1250,Math.max(860,540*vw/vh)))}
   document.querySelector('.stage').classList.toggle('mob',MOB);
-  cv.width=W;cv.height=H;
+  DPR=Math.min(2,window.devicePixelRatio||1);cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);
   UIH=MOB&&H>W?260:0;            // 세로 모바일: 아래 버튼(+Netlify 배지) 영역만큼 바닥을 올림
   PY=H-30-UIH;HOME=W/2;BX=HOME;
   REST.L.x=W*.3;REST.R.x=W*.7;REST.L.y=REST.R.y=H-10-(UIH?235:0);
   BASE.x=W-130;BASE.y=H+25-(UIH?230:0);
-  if(typeof bgC!=='undefined'){bgC.width=W+60;bgC.height=H+60;vgC.width=W;vgC.height=H;prerender()}
+  if(typeof bgC!=='undefined'){bgC.width=(W+60)*DPR;bgC.height=(H+60)*DPR;vgC.width=W*DPR;vgC.height=H*DPR;prerender()}
   rag=null;a=0;va=0;
 }
 let BX=HOME,a=0,va=0,sq=0,vsq=0,lift=0,vl=0,rest=0,upAt=-9,stag=0,rag=null;
@@ -145,13 +154,12 @@ let parts=[],rings=[],fx=[],missiles=[],tracers=[],marks=[],splats=[],pieces=[],
 let hurtT=0,dizzyT=0,zapT=0,lastHit=-99,now=0,combo=0,queued=null,markA=1,lastPopT=0,lastScorchT=0;
 let weapon='fist',cd=0,recoil=0,flash=0,firing=false,aim={x:480,y:220};
 let dead=false,deadT=0,deathAt=0,sound=true,restartArm=0,lastCDs=-1,lastHeatMsg=0;
-let coins=0,coinAcc=0,lv={},missileCD=0,nukeCD=0,nukes=[],whiteA=0,quakeT=0;let HEAT=0,OVER=0; // 과열은 모든 총이 같이 씀
+let coins=0,coinAcc=0,lv={},LOOK={x:0,y:0},DPR=1,missileCD=0,nukeCD=0,nukes=[],whiteA=0,quakeT=0;let HEAT=0,OVER=0; // 과열은 모든 총이 같이 씀
 for(const k of ORDER)lv[k]=0;
 try{localStorage.removeItem('dummy-save2')}catch(e){}
 function save(){} // 저장 안 함: 새로고침하면 코인·무기 처음부터
 const rnd=(lo,hi)=>lo+Math.random()*(hi-lo);
-const dmgMul=w=>1+(lv[w]-1)*UP_DMG;
-const missileCdMax=()=>MISSILE_CD-(Math.max(1,lv.missile)-1)*MISSILE_CD_STEP;
+const dmgMul=w=>1+(Math.max(1,lv[w])-1)*UP_DMG;
 
 /* ---- standing geometry ---- */
 function toLocal(x,y){const dx=x-BX,dy=y-PY,c=Math.cos(a),s=Math.sin(a);return{x:dx*c+dy*s,y:-dx*s+dy*c+80}}
@@ -282,7 +290,7 @@ function punch(name,tgt,hand,sp){
 }
 function clickPunch(x,y){
   const h=hitTest(x,y),hand=x<BX?'L':'R';
-  const name=h&&h.z==='body'&&(rag?h.pt==='pelvis':h.loc.y>-175)?'body':(hand==='L'?'jab':'straight');
+  const name=h&&((h.z==='body'&&(rag?h.pt==='pelvis':h.loc.y>-175))||h.z[0]==='l')?'body':(hand==='L'?'jab':'straight');
   punch(name,rag?null:toLocal(x,y),hand,rag?{x,y}:null);
 }
 const aimAngle=()=>Math.atan2(aim.y-BASE.y,aim.x-BASE.x);
@@ -296,14 +304,12 @@ function shot(x,y,G,kind,mz){
 function fire(x,y){
   if(weapon==='fist'||cd>0)return;
   const G=GUNS[weapon];
-  if(weapon==='missile'){if(missileCD>0||missiles.length)return}
-  else if(weapon==='nuke'){if(nukeCD>0||nukes.length)return;wake();nukeCD=NUKE_CD;renderWeapons();nukes.push({x:Math.max(120,Math.min(W-120,x)),y:-120,vy:200});siren();return}
-  else if(OVER>now){if(now-lastHeatMsg>.6){lastHeatMsg=now;pop(aim.x,aim.y-40,'과열!','#ff6b4a')}return}
+  if(weapon==='nuke'){wake();nukes.push({x:Math.max(120,Math.min(W-120,x)),y:-120,vy:200});siren();return}
+  else if(weapon!=='missile'&&OVER>now){if(now-lastHeatMsg>.6){lastHeatMsg=now;pop(aim.x,aim.y-40,'과열!','#ff6b4a')}return}
   wake();cd=G.cd;recoil=weapon==='laser'?.15:1;
   const mz=muzzle();
   if(G.heat){HEAT+=G.heat;if(HEAT>=1){HEAT=1;OVER=now+OVERHEAT;firing=false;hissS();pop(BASE.x-60,BASE.y-120,'과열! '+OVERHEAT+'초','#ff6b4a')}}
   if(weapon==='missile'){
-    missileCD=missileCdMax();renderWeapons();
     const d=Math.hypot(x-mz.x,y-mz.y);
     missiles.push({x0:mz.x,y0:mz.y,tx:x,ty:y,t:0,d:Math.max(.25,d/1100),arc:80});
     for(let i=0;i<8;i++)fx.push({k:'smoke',x:mz.x,y:mz.y,vx:rnd(-60,60),vy:rnd(-60,20),g:0,r:rnd(10,18),t:0,life:rnd(.4,.7)});
@@ -319,6 +325,8 @@ function fire(x,y){
   if(weapon==='tesla'){
     zapS();flash=.05;bolt(mz.x,mz.y,x,y,4);sparks(x,y,6);
     const h=hitTest(x,y);if(!h)return;
+    if(rag){standUp();a=0;va=0;upAt=-9;healNow=false} // 감전되면 정신 번쩍, 똑바로 섬
+    dizzyT=0;stag=0;
     zapT=.45;
     registerHit(h,x,y,rnd(G.pow[0],G.pow[1])*dmgMul('tesla')*(h.z==='head'?1.3:1),dirFrom(x,y),G,'zap');
     let px=x,py=y;
@@ -397,7 +405,7 @@ function registerHit(h,sx,sy,raw,dir,f,kind){
   const pow=Math.round(raw*(1+Math.min(combo,20)*.02)),k=Math.min(4,pow/35),imp=pow*.22*(f.imp||1);
   if(rag)push(h.pt,dir.x*imp,dir.y*imp-imp*.3);
   else{
-    const side=dir.x>=0?1:-1,limb=(h.z[0]==='l'?1.7:h.z[0]==='a'?1.2:1)*(kind==='bullet'||kind==='pellet'?2.2:kind==='zap'?3:1);
+    const side=dir.x>=0?1:-1,limb=(h.z[0]==='l'?1.7:h.z[0]==='a'?1.2:1)*(kind==='bullet'||kind==='pellet'?2.2:kind==='zap'?0:1);
     va+=f.ang*side*12*k*(h.z[0]==='l'?.5:1);vsq+=f.push*15*k;if(f.lift)vl+=f.lift*k;
     stag+=pow*limb;
     if(stag>STAGGER||pow>=110||(kind==='bullet'&&pow>=70)){
@@ -425,7 +433,7 @@ function impact(g){
   const m=MOVES[g.move];let h,S;
   if(g.sp){S=g.sp;h=hitTest(S.x,S.y)}
   else{S=toScreen(g.tgt);const z=zoneOf(g.tgt);h=z?{z,loc:g.tgt,pt:z==='body'&&g.tgt.y>-175?'pelvis':PT[z]}:null}
-  if(!h||(h.z!=='head'&&h.z!=='body')){pop(S.x,S.y,h&&h.z[0]==='l'?'반칙! 벨트 아래':'빗나감','#aaa');return} // 권투 룰: 머리·몸통만
+  if(!h||h.z[0]==='a'){pop(S.x,S.y,'빗나감','#aaa');return} // 머리·몸통·다리 다 맞음
   registerHit(h,S.x,S.y,rnd(m.pow[0],m.pow[1])*(h.z==='head'&&g.move==='body'?.8:1),{x:g.hand==='L'?1:-1,y:-.15},{ang:Math.abs(m.ang),push:m.push,lift:m.lift,imp:1},'fist');
 }
 function pop(x,y,s,c){parts.push({x,y,s,c,t:0})}
@@ -470,7 +478,7 @@ function update(dt){
   gloveUpdate(gl.L,dt);gloveUpdate(gl.R,dt);
   cd=Math.max(0,cd-dt);recoil=Math.max(0,recoil-dt*8);flash=Math.max(0,flash-dt);zapT=Math.max(0,zapT-dt);
   if(OVER>now)HEAT=(OVER-now)/OVERHEAT;else HEAT=Math.max(0,HEAT-(GUNS[weapon]?.cool||.12)*dt);
-  missileCD=Math.max(0,missileCD-dt);nukeCD=Math.max(0,nukeCD-dt);if(Math.ceil(missileCD)*1000+Math.ceil(nukeCD)!==lastCDs){lastCDs=Math.ceil(missileCD)*1000+Math.ceil(nukeCD);renderWeapons()}
+  {const hs=rag?rag.p.head:toScreen({x:0,y:-310}),dx=aim.x-hs.x,dy=aim.y-hs.y,l=Math.hypot(dx,dy)||1;LOOK.x+=(dx/l*4.5-LOOK.x)*Math.min(1,dt*12);LOOK.y+=(dy/l*4-LOOK.y)*Math.min(1,dt*12)}
   whiteA=Math.max(0,whiteA-dt*.7);if(quakeT>0){quakeT-=dt;shake=Math.max(shake,30*Math.min(1,quakeT))}
   nukes=nukes.filter(n=>{n.vy+=700*dt;n.y+=n.vy*dt;if(Math.random()<.6)fx.push({k:'smoke',x:n.x+rnd(-8,8),y:n.y-60,vx:rnd(-10,10),vy:-30,g:0,r:rnd(6,10),t:0,life:.6});if(n.y>=PY-30){nukeBoom(n.x);return false}return true});
   if(GUNS[weapon]?.auto&&firing&&cd<=0)fire(aim.x+(weapon==='smg'?rnd(-9,9):0),aim.y+(weapon==='smg'?rnd(-9,9):0));
@@ -521,10 +529,10 @@ function sceneStatic(){
 }
 function vignetteStatic(){const v=ctx.createRadialGradient(W/2,H/2,H*.35,W/2,H/2,W*.62);v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,.55)');ctx.fillStyle=v;ctx.fillRect(0,0,W,H)}
 const bgC=document.createElement('canvas'),vgC=document.createElement('canvas');
-function prerender(){ctx=bgC.getContext('2d');ctx.translate(30,30);sceneStatic();ctx=vgC.getContext('2d');vignetteStatic();ctx=mainCtx}
+function prerender(){ctx=bgC.getContext('2d');ctx.setTransform(DPR,0,0,DPR,30*DPR,30*DPR);sceneStatic();ctx=vgC.getContext('2d');ctx.setTransform(DPR,0,0,DPR,0,0);vignetteStatic();ctx=mainCtx}
 layout();
-function scene(){ctx.drawImage(bgC,-30,-30)}
-function vignette(){ctx.drawImage(vgC,0,0)}
+function scene(){ctx.drawImage(bgC,-30,-30,W+60,H+60)}
+function vignette(){ctx.drawImage(vgC,0,0,W,H)}
 let G_TORSO,G_HEAD;const G_GLOVE={};
 function torsoPath(){
   ctx.beginPath();
@@ -540,13 +548,15 @@ function partLeg(d){
   ctx.save();
   ctx.fillStyle=PANTS;ctx.beginPath();ctx.roundRect(d<0?-46:4,-110,42,186,10);ctx.fill();
   ctx.fillStyle='rgba(255,255,255,.08)';ctx.fillRect(d<0?-38:12,-96,6,166);
-  ctx.fillStyle='#151515';ell(d*28,80,30,11);
+  ctx.strokeStyle='rgba(20,20,40,.35)';ctx.lineWidth=2.5;ctx.beginPath();ctx.roundRect(d<0?-46:4,-110,42,186,10);ctx.stroke();
+  ctx.fillStyle='#f6f6f6';ell(d*30,84,32,9);ctx.fillStyle='#e8433b';ctx.beginPath();ctx.ellipse(d*26,74,26,12,0,Math.PI,0);ctx.fill();ctx.fillStyle='#fff';ctx.fillRect(d*26-12,70,24,3);
   ctx.beginPath();ctx.roundRect(d<0?-46:4,-110,42,186,10);ctx.clip();partMarks(d<0?'legL':'legR');
   ctx.restore();
 }
 function partTorso(){
   if(!G_TORSO){G_TORSO=ctx.createLinearGradient(-90,0,90,0);G_TORSO.addColorStop(0,'#1d5e52');G_TORSO.addColorStop(.38,SHIRT);G_TORSO.addColorStop(.7,'#277867');G_TORSO.addColorStop(1,'#16473e')}
-  ctx.fillStyle=G_TORSO;torsoPath();ctx.fill();
+  ctx.fillStyle=G_TORSO;torsoPath();ctx.fill();ctx.strokeStyle='rgba(10,40,35,.45)';ctx.lineWidth=3;ctx.stroke();
+  ctx.strokeStyle='rgba(0,0,0,.12)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-50,-190);ctx.quadraticCurveTo(-30,-176,-12,-186);ctx.moveTo(50,-170);ctx.quadraticCurveTo(32,-158,14,-166);ctx.stroke();
   ctx.fillStyle=SKIN;ctx.beginPath();ctx.moveTo(-18,-246);ctx.lineTo(18,-246);ctx.lineTo(0,-222);ctx.fill();
   ctx.fillStyle='#3a2a1a';ctx.fillRect(-56,-108,112,10);ctx.fillStyle='#c9a24a';ctx.fillRect(-8,-108,16,10);
   ctx.font='15px "Black Han Sans",sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
@@ -566,7 +576,7 @@ function partHead(){
   ctx.fillStyle='#d9a87e';ctx.fillRect(-18,-262,36,22);
   ctx.fillStyle=SKIN;ell(-48,-296,9,13);ell(48,-296,9,13);
   if(!G_HEAD){G_HEAD=ctx.createRadialGradient(-16,-322,6,0,-300,66);G_HEAD.addColorStop(0,'#ffe2c4');G_HEAD.addColorStop(.6,SKIN);G_HEAD.addColorStop(1,'#c99670')}
-  ctx.fillStyle=G_HEAD;ell(0,-300,48,58);
+  ctx.fillStyle=G_HEAD;ell(0,-300,48,58);ctx.strokeStyle='rgba(120,60,30,.35)';ctx.lineWidth=2.5;ctx.beginPath();ctx.ellipse(0,-300,48,58,0,0,Math.PI*2);ctx.stroke();
   ctx.save();ctx.beginPath();ctx.ellipse(0,-300,48,58,0,0,Math.PI*2);ctx.clip();
   ctx.fillStyle=HAIR;ell(0,-352,60,30);
   partMarks('head');ctx.restore();
@@ -679,13 +689,13 @@ function weaponSprite(){
     ctx.fillStyle='#2b2d31';ctx.beginPath();ctx.roundRect(-70,-30,260,60,10);ctx.fill();
     ctx.save();ctx.beginPath();ctx.roundRect(-70,-30,260,60,10);ctx.clip();ctx.fillStyle='#f2c230';for(let i=-80;i<200;i+=36){ctx.beginPath();ctx.moveTo(i,30);ctx.lineTo(i+18,30);ctx.lineTo(i+48,-30);ctx.lineTo(i+30,-30);ctx.fill()}ctx.restore();
     ctx.fillStyle='#111';ctx.beginPath();ctx.roundRect(170,-36,24,72,6);ctx.fill();
-    if(nukeCD<=0&&!nukes.length){ctx.fillStyle='#e5484d';ell(60,-38,10,7)}
+    {ctx.fillStyle='#e5484d';ell(60,-38,10,7)}
   }else if(w==='missile'){
     ctx.fillStyle='#222';ctx.fillRect(30,20,22,46);
     ctx.fillStyle='#4b5a2e';ctx.beginPath();ctx.roundRect(-60,-24,235,48,8);ctx.fill();
     ctx.fillStyle='#39461f';ctx.fillRect(150,-28,25,56);ctx.fillRect(-60,-28,18,56);
     ctx.fillStyle='rgba(255,255,255,.12)';ctx.fillRect(-50,-18,200,6);
-    if(missileCD<=0&&!missiles.length){ctx.fillStyle='#d9342b';ctx.beginPath();ctx.moveTo(175,-14);ctx.lineTo(196,0);ctx.lineTo(175,14);ctx.fill()}
+    {ctx.fillStyle='#d9342b';ctx.beginPath();ctx.moveTo(175,-14);ctx.lineTo(196,0);ctx.lineTo(175,14);ctx.fill()}
   }else{
     ctx.fillStyle=w==='laser'?'#cfd4da':w==='tesla'?'#3a2e26':'#2a1d14';ctx.beginPath();ctx.moveTo(-14,8);ctx.lineTo(18,8);ctx.lineTo(10,72);ctx.lineTo(-24,68);ctx.closePath();ctx.fill();
     if(w==='shotgun'){
@@ -745,8 +755,7 @@ function crosshair(){
   const {x,y}=aim;
   for(const [c,w] of [['#000',5],['#fff',2]]){ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();ctx.arc(x,y,14,0,Math.PI*2);ctx.moveTo(x-24,y);ctx.lineTo(x-8,y);ctx.moveTo(x+8,y);ctx.lineTo(x+24,y);ctx.moveTo(x,y-24);ctx.lineTo(x,y-8);ctx.moveTo(x,y+8);ctx.lineTo(x,y+24);ctx.stroke()}
   ctx.font='600 13px "Noto Sans KR",sans-serif';ctx.textAlign='center';ctx.textBaseline='top';
-  if(weapon==='nuke'){const t=nukeCD>0?'재장전 '+fmt(nukeCD):'아무 데나 클릭하면 하늘에서 떨어짐';ctx.fillStyle='#000';ctx.fillText(t,x+1,y+33);ctx.fillStyle='#f2c04b';ctx.fillText(t,x,y+32);return}
-  if(weapon==='missile'){if(missileCD>0){ctx.fillStyle='#000';ctx.fillText('재장전 '+fmt(missileCD),x+1,y+33);ctx.fillStyle='#f2c04b';ctx.fillText('재장전 '+fmt(missileCD),x,y+32)}return}
+  if(weapon==='nuke'||weapon==='missile')return;
   const hv=HEAT,locked=OVER>now;
   if(hv>0.01){
     ctx.fillStyle='rgba(0,0,0,.5)';ctx.beginPath();ctx.roundRect(x-30,y+32,60,6,3);ctx.fill();
@@ -787,6 +796,7 @@ function effects(){
   }
 }
 function draw(){
+  ctx.setTransform(DPR,0,0,DPR,0,0);
   ctx.save();if(shake>.5)ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);
   scene();dummy();for(const m of missiles)missileDraw(m);for(const n of nukes)nukeDraw(n);fxDraw();effects();
   if(weapon==='fist'){glove(gl.L);glove(gl.R)}else weaponSprite();
@@ -804,10 +814,20 @@ requestAnimationFrame(loop);
 
 /* ---- input ---- */
 const KEYS={KeyJ:'jab',KeyK:'straight',KeyH:'hook',KeyU:'upper',KeyB:'body'},WKEYS={Digit1:'fist',Digit2:'gun',Digit3:'shotgun',Digit4:'smg',Digit5:'laser',Digit6:'tesla',Digit7:'missile',Digit8:'nuke'};
-const shopEl=document.getElementById('shop');
+const shopEl=document.getElementById('shop'),codeEl=document.getElementById('code');
+const REDEEM={'123456':10000},usedCodes={}; // 코드: 받는 코인 (새로고침 전까지 한 번씩)
+document.getElementById('codeBtn').addEventListener('click',()=>{firing=false;document.getElementById('codeMsg').textContent='';document.getElementById('codeIn').value='';codeEl.hidden=false;setTimeout(()=>document.getElementById('codeIn').focus(),50)});
+document.getElementById('codeClose').addEventListener('click',()=>{codeEl.hidden=true});
+codeEl.addEventListener('click',e=>{if(e.target===codeEl)codeEl.hidden=true});
+document.getElementById('codeForm').addEventListener('submit',e=>{
+  e.preventDefault();const v=document.getElementById('codeIn').value.trim(),msg=document.getElementById('codeMsg');
+  if(REDEEM[v]&&!usedCodes[v]){usedCodes[v]=1;coins+=REDEEM[v];msg.textContent=REDEEM[v].toLocaleString()+' 코인 지급!';renderWeapons()}
+  else msg.textContent=usedCodes[v]?'이미 사용한 코드예요':'잘못된 코드예요';
+});
 addEventListener('keydown',e=>{
   if(e.repeat)return;
   if(!started){if(e.code==='Enter'||e.code==='Space'){startGame();e.preventDefault()}return}
+  if(!codeEl.hidden){if(e.code==='Escape')codeEl.hidden=true;return}
   if(!shopEl.hidden&&e.code!=='KeyS'&&e.code!=='Escape')return;
   if(KEYS[e.code]){punch(KEYS[e.code]);e.preventDefault()}
   else if(WKEYS[e.code]){setWeapon(WKEYS[e.code]);e.preventDefault()}
@@ -836,7 +856,7 @@ cv.addEventListener('pointerdown',e=>{
 cv.addEventListener('pointermove',e=>{aim=cpos(e)});
 for(const ev of['pointerup','pointercancel'])cv.addEventListener(ev,()=>{firing=false});
 function restartAll(){
-  restartArm=0;coins=0;coinAcc=0;gunHits=0;missileCD=0;nukeCD=0;nukes=[];for(const k of ORDER)lv[k]=0;HEAT=0;OVER=0;save();
+  restartArm=0;coins=0;coinAcc=0;gunHits=0;nukes=[];for(const k of ORDER)lv[k]=0;HEAT=0;OVER=0;
   pieces=[];rag=null;shades=[];fx=[];missiles=[];tracers=[];combo=0;dead=false;rest=0;a=0;va=0;BX=HOME;stag=0;
   setWeapon('fist');renderWeapons();
 }
@@ -844,17 +864,17 @@ const fmt=t=>{t=Math.ceil(t);return Math.floor(t/60)+':'+String(t%60).padStart(2
 function renderWeapons(){
   for(const w of ORDER){
     document.querySelector('[data-w="'+w+'"]').classList.toggle('lock',!lv[w]);
-    document.getElementById('s-'+w).textContent=w==='missile'&&missileCD>0?fmt(missileCD):w==='nuke'?(nukeCD>0?fmt(nukeCD):'준비'):'Lv'+lv[w];
+    document.getElementById('s-'+w).textContent=SHOP[w].max===1?'':'Lv'+lv[w];
   }
   if(!shopEl.hidden)renderShop();
 }
 function renderShop(){
-  document.getElementById('shopcoins').textContent='보유 코인 '+coins;
+  document.getElementById('shopcoins').textContent='보유 코인 '+coins.toLocaleString();
   document.getElementById('items').innerHTML=ORDER.map(k=>{
     const it=SHOP[k],l=lv[k],G=GUNS[k],mul=1+Math.max(0,l-1)*UP_DMG;
-    const info=k==='nuke'?'쿨타임 '+NUKE_CD+'초':k==='missile'?'쿨타임 '+(MISSILE_CD-Math.max(0,l-1)*MISSILE_CD_STEP)+'초':'데미지 '+Math.round(G.pow[0]*mul)+'~'+Math.round(G.pow[1]*mul)+(G.pellets?' × '+G.pellets+'발':'');
+    const info=G.pow?'데미지 '+Math.round(G.pow[0]*mul)+'~'+Math.round(G.pow[1]*mul)+(G.pellets?' × '+G.pellets+'발':'')+' · '+it.desc:it.desc;
     const cost=l?it.up*l:it.buy,label=!l?'구매 '+cost.toLocaleString():it.max===1?'보유':l>=it.max?'최대':'강화 '+cost;
-    return '<div class="item"><div><b>'+it.name+(l?' Lv'+l:'')+'</b><small>'+info+' · '+it.desc+'</small></div><button data-buy="'+k+'"'+(l>=it.max||coins<cost?' disabled':'')+'>'+label+'</button></div>';
+    return '<div class="item"><div><b>'+it.name+(l&&it.max>1?' Lv'+l:'')+'</b><small>'+info+'</small></div><button data-buy="'+k+'"'+(l>=it.max||coins<cost?' disabled':'')+'>'+label+'</button></div>';
   }).join('');
 }
 function openShop(){firing=false;renderShop();shopEl.hidden=false}
@@ -863,7 +883,7 @@ document.getElementById('items').addEventListener('click',e=>{
   const k=e.target.closest('[data-buy]')?.dataset.buy;if(!k)return;
   const it=SHOP[k],l=lv[k],cost=l?it.up*l:it.buy;
   if(l>=it.max||coins<cost)return;
-  coins-=cost;lv[k]=l+1;save();renderShop();renderWeapons();
+  coins-=cost;lv[k]=l+1;renderShop();renderWeapons();
   if(!l)setWeapon(k);
 });
 document.getElementById('shopclose').addEventListener('click',closeShop);
